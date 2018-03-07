@@ -1,0 +1,6 @@
+#! /bin/sh -x
+
+remote_host=$1
+remote_pgdata=$2
+
+ssh -T $remote_host sudo systemctl start postgresql-{{ pg_version_major }}.service

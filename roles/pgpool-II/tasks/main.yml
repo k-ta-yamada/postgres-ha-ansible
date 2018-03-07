@@ -1,0 +1,200 @@
+- name: pgpool
+  tags: pgpool
+  block:
+
+    # ##################################################
+    # CONFIRM
+    # ##################################################
+    # - debug: var=pg_version
+    # - debug: var=pgpool_major
+    # - debug: var=pgpool_minor
+    # - debug: var=rpm
+
+    # ##################################################
+    # YUM INSTALL
+    # ##################################################
+    - tags: yum
+      block:
+        - tags: yum-rpm
+          name: "yum install pgpool rpm: {{ rpm.filename }}"
+          yum: pkg={{ rpm.baseurl }}{{ rpm.filename }}
+
+        - tags: yum-install
+          name: "yum install"
+          yum: pkg={{ item }}
+          with_items: "{{rpm.packages}}"
+
+    # ##################################################
+    # create /var/run/pgpol, /var/log/pgpol directory
+    # ##################################################
+    - tags: create-directory
+      name: create-directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ rundir }}"
+        - "{{ logdir }}"
+
+    # ##################################################
+    # pgpool.conf
+    # ##################################################
+    - tags: pgpool.conf
+      name: pgpool.conf
+      template:
+        src: pgpool.conf.sample-stream.j2
+        dest: "/etc/pgpool-II/pgpool.conf"
+
+    # ##################################################
+    # /etc/pgpool-II/failover.sh
+    # ##################################################
+    - tags: failover.sh
+      name: failover.sh
+      template:
+        src:  failover.sh.j2
+        dest: "/etc/pgpool-II/failover.sh"
+        # mode: 0755
+        mode: 0700
+
+    # ##################################################
+    # /etc/pgpool-II/pcp.conf
+    # ##################################################
+    - tags: pcp.conf
+      name: pcp.conf
+      block:
+        - stat: path="/etc/pgpool-II/pcp.conf"
+          register: f
+        # - debug: var=f.stat.path
+        # - debug: var=f.stat.exists
+
+        - name: "pcp.conf : pg_md5"
+          when: f.stat.exists
+          shell: echo {{ item.user }}:$(pg_md5 {{ item.pass }})
+          register: md5
+          changed_when: false
+          with_items: "{{ pcp_conf.entries }}"
+
+        - name: pcp.conf
+          when: f.stat.exists
+          blockinfile:
+            path: "/etc/pgpool-II/pcp.conf"
+            content: "{{ md5.results | join('\n', 'stdout') }}"
+
+    # ##################################################
+    # /etc/pgpool-II/pool_hba.conf
+    # ##################################################
+    - tags: pool_hba.conf
+      name: pool_hba.conf
+      block:
+        - stat: path="/etc/pgpool-II/pool_hba.conf"
+          register: f
+        # - debug: var=f.stat.path
+        # - debug: var=f.stat.exists
+
+        - name: pool_hba.conf
+          when: f.stat.exists
+          blockinfile:
+            path: "/etc/pgpool-II/pool_hba.conf"
+            content: "{{ pool_hba_conf.entries | join('\n') }}"
+
+    # ##################################################
+    # /etc/pgpool-II/pool_password
+    # ##################################################
+    - tags: pool_password
+      name: pool_password by `pg_md5`
+      command: pg_md5 --username {{ item.user }} --md5auth {{ item.pass }}
+      changed_when: false
+      with_items: "{{ pcp_conf.entries }}"
+
+    # ##################################################
+    # recovery_1st_stage.sh
+    # ##################################################
+    - tags: recovery_1st_stage.sh
+      name: "recovery_1st_stage.sh : {{pgpool_conf.recovery_1st_stage_command}}"
+      when: inventory_hostname == primary_hostname
+      template:
+        src:   recovery_1st_stage.sh.j2
+        dest:  "{{ pgdata_dir }}{{ pgpool_conf.recovery_1st_stage_command }}"
+        owner: postgres
+        group: postgres
+        # mode:  0755
+        mode:  0700
+
+    # ##################################################
+    # pgpool_remote_start : recovery_2nd_stage
+    # ##################################################
+    - tags: pgpool_remote_start
+      name: "pgpool_remote_start : {{ pgpool_conf.recovery_2nd_stage_command }}"
+      when: inventory_hostname == primary_hostname
+      template:
+        src:   pgpool_remote_start.j2
+        dest:  "{{ pgdata_dir }}{{ pgpool_conf.recovery_2nd_stage_command }}"
+        owner: postgres
+        group: postgres
+        # mode:  0755
+        mode:  0700
+
+    # ##################################################
+    # CREATE EXTENSION
+    # ##################################################
+    - tags: create_db_obj
+      when: inventory_hostname == primary_hostname
+      block:
+        # service start
+        - name: service started
+          changed_when: false
+          systemd:
+            name: postgresql-{{ pg_version_major }}.service
+            state: started
+
+        # CREATE EXTENSION
+        - name: create extension by postgresql_ext
+          postgresql_ext:
+            name: "{{ item.name }}"
+            db:   "{{ item.db }}"
+          with_items: "{{ create_extension }}"
+          become_user: postgres
+        - name: create extension by postgresql_ext
+          postgresql_ext:
+            name: "{{ item.name }}"
+            db:   "postgres"
+          with_items: "{{ create_extension }}"
+          become_user: postgres
+
+        # NOTE: Although there is no problem at the time of new construction,
+        #       it will cause failover after operation.
+        # service stop
+        # - name: service stopped
+        #   changed_when: false
+        #   systemd:
+        #     name: pgpool.service
+        #     state: stopped
+        # - name: service stopped
+        #   changed_when: false
+        #   systemd:
+        #     name: postgresql-{{ pg_version_major }}.service
+        #     state: stopped
+
+    # ##################################################
+    # enable pgpool.service
+    # ##################################################
+    - tags: enable-pgpool
+      name: enable-pgpool
+      systemd:
+        name: pgpool.service
+        enabled: yes
+
+    # ##################################################
+    # sudoers.d
+    # ##################################################
+    # sudoers.d/postgres systemctl
+    # pcp_recovery_nodeで必要になる
+    - tags: sudoers.d
+      block:
+        - shell: which systemctl
+          changed_when: false
+          register: which_systemctl
+        - name: sudoers.d
+          template:
+            src:   postgres.j2
+            dest:  "/etc/sudoers.d/postgres"

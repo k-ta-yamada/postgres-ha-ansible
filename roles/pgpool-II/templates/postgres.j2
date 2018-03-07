@@ -1,0 +1,6 @@
+Defaults:postgres !requiretty
+
+postgres ALL=NOPASSWD: {{ which_systemctl.stdout }} stop    postgresql*.service
+postgres ALL=NOPASSWD: {{ which_systemctl.stdout }} start   postgresql*.service
+postgres ALL=NOPASSWD: {{ which_systemctl.stdout }} restart postgresql*.service
+postgres ALL=NOPASSWD: {{ which_systemctl.stdout }} status  postgresql*.service

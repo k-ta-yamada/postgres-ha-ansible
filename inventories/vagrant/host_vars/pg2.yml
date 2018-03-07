@@ -1,0 +1,7 @@
+pgpool_conf:
+  # - Watchdog communication Settings -
+  wd_hostname:            "{{ backend_prefix }}{{ standby_hostname}}"
+  # -- heartbeat mode --
+  heartbeat_destination0: "{{ backend_prefix }}{{ primary_hostname }}"
+  # - Other pgpool Connection Settings -
+  other_pgpool_hostname0: "{{ backend_prefix }}{{ primary_hostname }}"

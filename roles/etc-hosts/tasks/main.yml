@@ -1,0 +1,11 @@
+- name: /etc/hosts
+  tags: hosts
+  block:
+    - set_fact:
+        hosts_entries: "{{ item.ip }} {{ item.name }}"
+      register: result
+      with_items: "{{ vip + frontend + backend }}"
+    - name: /etc/hosts
+      blockinfile:
+        path:    /etc/hosts
+        content: "{{ result.results | join('\n', 'ansible_facts.hosts_entries') }}"
