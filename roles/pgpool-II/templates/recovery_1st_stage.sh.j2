@@ -1,0 +1,23 @@
+#!/bin/bash -x
+# Recovery script for streaming replication.
+
+pgdata=$1
+remote_host=$2
+remote_pgdata=$3
+port=$4
+pghome=/usr/pgsql-{{ pg_version_major }}
+hostname={{ backend_prefix }}$(hostname)
+
+echo ---------------------------------------- >> /var/lib/pgsql/recovery_1st_stage.log
+date                                          >> /var/lib/pgsql/recovery_1st_stage.log
+echo "pgdata        = [${pgdata}]"            >> /var/lib/pgsql/recovery_1st_stage.log
+echo "remote_host   = [${remote_host}]"       >> /var/lib/pgsql/recovery_1st_stage.log
+echo "remote_pgdata = [${remote_pgdata}]"     >> /var/lib/pgsql/recovery_1st_stage.log
+echo "port          = [${port}]"              >> /var/lib/pgsql/recovery_1st_stage.log
+echo "pghome        = [${pghome}]"            >> /var/lib/pgsql/recovery_1st_stage.log
+echo "hostname      = [${hostname}]"          >> /var/lib/pgsql/recovery_1st_stage.log
+
+ssh -T postgres@$remote_host "
+rm -rf ${remote_pgdata}
+$pghome/bin/pg_basebackup -h ${hostname} -U {{ replication_user }} -D ${remote_pgdata} -R -c fast
+"

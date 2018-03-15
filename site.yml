@@ -1,0 +1,18 @@
+- hosts:
+    - dbservers
+  become: yes
+  roles:
+    # - etc-hosts
+    # - postgresql  # dependencies: etc-hosts
+    - pgpool-II   # dependencies: etc-hosts, postgresql
+  # vars:
+  # vars_files:
+  #   - "inventories/{{ env }}/vars/main.yml"
+  # vars_prompt:
+  #   - name: is_rm_pgdata_dir
+  #     prompt: "rm pgdata_dir ?"
+  #     default: no
+  # pre_tasks:
+  # tasks:
+  #   - name: test
+  #     debug:
