@@ -1,0 +1,5 @@
+logrotate \
+    {{ pgdata_dir }}log/postgresql.logrotate.conf \
+    --state {{ pgdata_dir }}log/postgresql.logrotate.status \
+    --force \
+    --verbose

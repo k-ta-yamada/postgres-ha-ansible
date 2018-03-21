@@ -1,0 +1,7 @@
+{{ pgdata_dir }}log/{{ logrotate.log_filename }} {
+    missingok
+    rotate {{ logrotate.rotate }}
+    dateext
+    copytruncate
+    dateformat .%Y-%m-%d-%s
+}

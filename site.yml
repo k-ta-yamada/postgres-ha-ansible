@@ -13,18 +13,18 @@
   #     prompt: "rm pgdata_dir ?"
   #     default: no
   pre_tasks:
-    - tags: change_password
-      name: change_password
-      when: env | default("") == "vagrant"
-      block:
-        - user:
-            name: "{{ item }}"
-            password: "{{ 'a' | password_hash('sha512') }}"
-          changed_when: false
-          with_items:
-            - vagrant
-            - root
-            - postgres
+    # - tags: change_password
+    #   name: change_password
+    #   when: env | default("") == "vagrant"
+    #   block:
+    #     - user:
+    #         name: "{{ item }}"
+    #         password: "{{ 'a' | password_hash('sha512') }}"
+    #       changed_when: false
+    #       with_items:
+    #         - vagrant
+    #         - root
+    #         - postgres
   # tasks:
   #   - name: test
   #     debug:
