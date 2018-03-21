@@ -1,0 +1,8 @@
+[Unit]
+  Description=postgresql.logrotate
+
+[Service]
+  ExecStart=/bin/bash {{ pgdata_dir }}log/postgresql.logrotate.sh
+  Type=oneshot
+  User=postgres
+  WorkingDirectory={{ pgdata_dir }}

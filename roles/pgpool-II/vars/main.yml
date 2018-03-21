@@ -120,10 +120,12 @@ pgpool_conf:
   failover_when_quorum_exists: "off"
   failover_require_consensus: "off"
 
-pcp_conf:
-  entries:
-    - { user: "{{ superuser       }}", pass: "{{ superuser_password  }}"}
-    - { user: "{{ pool_check_user }}", pass: "{{ pool_check_password }}"}
+# NOTE: Since this differs for each inventory (env),
+#       it moves to `./inventory/{env_name}/hosts.yml`.
+# pcp_conf:
+#   entries:
+#     - { user: "{{ superuser       }}", pass: "{{ superuser_password  }}"}
+#     - { user: "{{ pool_check_user }}", pass: "{{ pool_check_password }}"}
 
 # NOTE: Since this differs for each inventory (env),
 #       it moves to `./inventory/{env_name}/hosts.yml`.
