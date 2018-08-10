@@ -2,49 +2,29 @@
 
 ## Vagrant setup
 
-### on Mac
-
 ```sh
+# optional
 vagrant plugin install vagrant-hostmanager
+
 vagrant up
-vagrant reload
+vagrant reload --no-provision
+
+ssh-keygen
+ssh-copy-id vagrant@192.168.1.201
+ssh-copy-id vagrant@192.168.1.202
+
+ssh vagrant@192.168.1.201 hostname
+ssh vagrant@192.168.1.202 hostname
+
+# optional
 vagrant ssh-config >> ~/.ssh/config
+ssh pg1 hostname
+ssh pg2 hostname
 
-ssh-keygen
-ssh-copy-id vagrant@192.168.1.201
-ssh-copy-id vagrant@192.168.1.202
-
-ssh 192.168.1.201 hostname
-ssh 192.168.1.202 hostname
-
+# confirm
 ansible all -i inventories/vagrant/hosts.yml -m ping
 
-vagrant halt
-vagrant snapshot save init
-vagrant up
-```
-
-### on Windows
-
-```sh
-vagrant plugin install vagrant-hostmanager
-vagrant up
-vagrant reload
-vagrant ssh-config >> %userprofile%\.ssh\config
-
-ssh pg0
-
-ssh-keygen
-ssh-copy-id vagrant@192.168.1.201
-ssh-copy-id vagrant@192.168.1.202
-ssh 192.168.1.201 hostname
-ssh 192.168.1.202 hostname
-
-cd /vagrant
-ansible all -i inventories/vagrant/hosts.yml -m ping
-
-exit
-
+# optional
 vagrant halt
 vagrant snapshot save init
 vagrant up
@@ -52,20 +32,8 @@ vagrant up
 
 ## install `ansible`
 
-### on Mac
-
 ```sh
 brew install ansible
-```
-
-### on Windows
-
-```sh
-ssh pg0
-su - root
-yum install -y ansible
-exit
-cd /vagrant
 ```
 
 ## `ansible-playbook`
@@ -81,29 +49,43 @@ ansible-playbook site.yml -i inventories/vagrant/hosts.yml
 ssh `pg1` and `pg2`
 
 ```sh
-su - root
+sudo su
+
 passwd postgres
 
 su - postgres
+
 ssh-keygen
+
 ssh-copy-id backend-pg1
 ssh-copy-id backend-pg2
+
+ssh backend-pg1
+ssh backend-pg2
 ```
 
-### 2. startup `primary` PostgreSQL database at `pg1`
+### 2. stop `standby` PostgreSQL database at `pg2`
+
+```sh
+systemctl stop postgresql-10.service
+```
+
+### 3. startup `primary` PostgreSQL database at `pg1`
 
 ```sh
 systemctl start postgresql-10.service
 systemctl start pgpool.service
 ```
 
-### 3. startup `standby` PostgreSQL database
+### 4. startup `standby` PostgreSQL database
 
 ```sh
 pcp_recovery_node -h pg -U postgres -n 1
 ```
 
-### 4. startup pgpool-II at `pg2`
+`pg` is `vip` setuped by pgpool.
+
+### 5. startup pgpool-II at `pg2` (optional)
 
 ```sh
 systemctl start pgpool.service

@@ -111,7 +111,6 @@
     # ##################################################
     - tags: recovery_1st_stage.sh
       name: "recovery_1st_stage.sh : {{pgpool_conf.recovery_1st_stage_command}}"
-      when: inventory_hostname == primary_hostname
       template:
         src:   recovery_1st_stage.sh.j2
         dest:  "{{ pgdata_dir }}{{ pgpool_conf.recovery_1st_stage_command }}"
@@ -125,7 +124,6 @@
     # ##################################################
     - tags: pgpool_remote_start
       name: "pgpool_remote_start : {{ pgpool_conf.recovery_2nd_stage_command }}"
-      when: inventory_hostname == primary_hostname
       template:
         src:   pgpool_remote_start.j2
         dest:  "{{ pgdata_dir }}{{ pgpool_conf.recovery_2nd_stage_command }}"
@@ -138,7 +136,6 @@
     # CREATE EXTENSION
     # ##################################################
     - tags: create_db_obj
-      when: inventory_hostname == primary_hostname
       block:
         # service start
         - name: service started

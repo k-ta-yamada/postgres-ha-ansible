@@ -15,11 +15,6 @@
       when: is_rm_pgdata_dir and yn.user_input | default('n') != 'y'
       run_once: true
 
-    # - debug: var=pg_version
-    # - debug: var=pg_version_major
-    # - debug: var=pg_version_minor
-    # - debug: var=rpm
-
     # ##################################################
     # YUM INSTALL
     # ##################################################
@@ -67,7 +62,6 @@
     # initdb
     # ##################################################
     - tags: initdb
-      when: inventory_hostname == primary_hostname
       block:
         - name: rm pgdata_dir
           when: is_rm_pgdata_dir
@@ -124,81 +118,14 @@
     # ##################################################
     - tags: postgresql.conf
       name: postgresql.conf
-      when: inventory_hostname == primary_hostname
       blockinfile:
         path: "{{ pgdata_dir }}postgresql.conf"
         content: "{{ postgresql_conf.entries | join('\n') }}"
 
     # ##################################################
-    # logrotate
-    # ##################################################
-    - tags: [logrotate, logrotate.conf.sh]
-      name: logrotate.conf.sh
-      block:
-        - name: "stat: {{ pgdata_dir }}log/"
-          stat: path="{{ pgdata_dir }}log/"
-          register: f
-        # - debug: var=f.stat.path
-        # - debug: var=f.stat.exists
-
-        - tags: logrotate.conf
-          name: logrotate.conf
-          when: f.stat.exists
-          template:
-            src: postgresql.logrotate.conf.j2
-            dest: "{{ pgdata_dir }}log/postgresql.logrotate.conf"
-
-        - tags: logrotate.sh
-          name: logrotate.sh
-          when: f.stat.exists
-          template:
-            src: postgresql.logrotate.sh.j2
-            dest: "{{ pgdata_dir }}log/postgresql.logrotate.sh"
-
-    - tags: [logrotate, logrotate.service]
-      name: logrotate.service
-      block:
-        - name: "stat: {{ pgdata_dir }}log/postgresql.logrotate.conf"
-          stat: path="{{ pgdata_dir }}log/postgresql.logrotate.conf"
-          register: f
-        # - debug: var=f.stat.path
-        # - debug: var=f.stat.exists
-
-        - tags: logrotate.service
-          name: logrotate.service
-          when: f.stat.exists
-          template:
-            src: postgresql.logrotate.service.j2
-            dest: "/etc/systemd/system/postgresql.logrotate.service"
-
-        - tags: logrotate.timer
-          name: logrotate.timer
-          when: f.stat.exists
-          template:
-            src: postgresql.logrotate.timer.j2
-            dest: "/etc/systemd/system/postgresql.logrotate.timer"
-
-        # service start
-        - tags: [logrotate, logrotate.service.started]
-          name: logrotate.service.started
-          block:
-            - name: "stat: /etc/systemd/system/postgresql.logrotate.timer"
-              stat: path="/etc/systemd/system/postgresql.logrotate.timer"
-              register: f
-            # - debug: var=f.stat.path
-            # - debug: var=f.stat.exists
-
-            - name: service.started
-              when: f.stat.exists
-              systemd:
-                name: postgresql.logrotate.timer
-                state: started
-
-    # ##################################################
     # CREATE ROLE
     # ##################################################
     - tags: create_db_obj
-      when: inventory_hostname == primary_hostname
       block:
         # service start
         - name: service started
@@ -230,3 +157,39 @@
         #   systemd:
         #     name: postgresql-{{ pg_version_major }}.service
         #     state: stopped
+
+    # ##################################################
+    # logrotate
+    # ##################################################
+    - name: "stat: {{ pgdata_dir }}log/"
+      stat: path="{{ pgdata_dir }}log/"
+      register: f
+
+    - tags: [logrotate, logrotate.conf.sh]
+      name: logrotate.conf.sh
+      when: f.stat.exists
+      block:
+        - name: postgresql.logrotate.conf
+          template:
+            src: postgresql.logrotate.conf.j2
+            dest: "{{ pgdata_dir }}log/postgresql.logrotate.conf"
+            owner: postgres
+            group: postgres
+        - name: postgresql.logrotate.sh
+          template:
+            src: postgresql.logrotate.sh.j2
+            dest: "{{ pgdata_dir }}log/postgresql.logrotate.sh"
+            owner: postgres
+            group: postgres
+        - name: postgresql.logrotate.service
+          template:
+            src: postgresql.logrotate.service.j2
+            dest: "/etc/systemd/system/postgresql.logrotate.service"
+        - name: postgresql.logrotate.timer
+          template:
+            src: postgresql.logrotate.timer.j2
+            dest: "/etc/systemd/system/postgresql.logrotate.timer"
+        - name: postgresql.logrotate.timer start
+          systemd:
+            name: postgresql.logrotate.timer
+            state: started
