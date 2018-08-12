@@ -39,8 +39,10 @@ brew install ansible
 ## `ansible-playbook`
 
 ```sh
-ansible-playbook site.yml -i inventories/vagrant/hosts.yml
+ansible-playbook site.yml -i inventories/vagrant/hosts.yml --ask-pass
 ```
+
+`--ask-pass` is aka `-k`
 
 ## startup PostgreSQL and pgpool-II
 
@@ -139,6 +141,7 @@ psql -h pg -p 9999 -U postgres -c "show pool_nodes"
 ansible check
 
 ```sh
+# Specify the `--ask-pass` or `-k` option as necessary.
 ansible all -i inventories/vagrant/hosts.yml -m ping
 ansible all -i inventories/vagrant/hosts.yml -m setup
 ```
