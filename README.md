@@ -1,40 +1,50 @@
 # postgres-ha-ansible
 
+
+
 ## Vagrant setup
 
 ```sh
 # optional
 vagrant plugin install vagrant-hostmanager
 
+# start VM
 vagrant up
 vagrant reload --no-provision
 
-ssh-keygen
-ssh-copy-id vagrant@192.168.1.201
-ssh-copy-id vagrant@192.168.1.202
-
-ssh vagrant@192.168.1.201 hostname
-ssh vagrant@192.168.1.202 hostname
-
-# optional
-vagrant ssh-config >> ~/.ssh/config
-ssh pg1 hostname
-ssh pg2 hostname
-
-# confirm
-ansible all -i inventories/vagrant/hosts.yml -m ping
-
-# optional
+# optional: for restore
 vagrant halt
 vagrant snapshot save init
 vagrant up
+
+# remove from known_hosts
+ssh-keygen -R 192.168.1.201
+ssh-keygen -R 192.168.1.202
+
+# add known_hosts
+ssh-keyscan 192.168.1.201 >> ~/.ssh/known_hosts
+ssh-keyscan 192.168.1.202 >> ~/.ssh/known_hosts
+
+# confirm: ansible ping
+# export ANSIBLE_HOST_KEY_CHECKING=False
+ansible all -i inventories/vagrant/hosts.yml -m ping
+
+
+# optional: using `ssh` commnad instead of `vagrant ssh` commnad.
+vagrant ssh-config >> ~/.ssh/config
+ssh pg1 hostname
+ssh pg2 hostname
 ```
+
+
 
 ## install `ansible`
 
 ```sh
 brew install ansible
 ```
+
+
 
 ## `ansible-playbook`
 
@@ -43,6 +53,8 @@ ansible-playbook site.yml -i inventories/vagrant/hosts.yml --ask-pass
 ```
 
 `--ask-pass` is aka `-k`
+
+
 
 ## startup PostgreSQL and pgpool-II
 
@@ -93,6 +105,8 @@ pcp_recovery_node -h pg -U postgres -n 1
 systemctl start pgpool.service
 ```
 
+
+
 ## check
 
 ```sh
@@ -135,6 +149,8 @@ psql -h pg -p 9999 -U postgres -c "show pool_nodes"
  1       | backend-pg2 | 5432 | up     | 0.500000  | standby | 0          | false             | 0
 (2 rows)
 ```
+
+
 
 ## memo
 
