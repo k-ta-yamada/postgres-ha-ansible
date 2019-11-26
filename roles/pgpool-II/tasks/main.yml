@@ -138,7 +138,7 @@
     - tags: create_db_obj
       block:
         # service start
-        - name: service started
+        - name: service started postgresql
           changed_when: false
           systemd:
             name: postgresql-{{ pg_version_major }}.service
@@ -166,20 +166,20 @@
         #   systemd:
         #     name: pgpool.service
         #     state: stopped
-        # - name: service stopped
-        #   changed_when: false
-        #   systemd:
-        #     name: postgresql-{{ pg_version_major }}.service
-        #     state: stopped
+        - name: service stopped postgresql
+          # changed_when: false
+          systemd:
+            name: postgresql-{{ pg_version_major }}.service
+            state: stopped
 
     # ##################################################
     # enable pgpool.service
     # ##################################################
-    - tags: enable-pgpool
-      name: enable-pgpool
-      systemd:
-        name: pgpool.service
-        enabled: yes
+    # - tags: enable-pgpool
+    #   name: enable-pgpool
+    #   systemd:
+    #     name: pgpool.service
+    #     enabled: yes
 
     # ##################################################
     # sudoers.d

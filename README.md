@@ -1,34 +1,45 @@
 # postgres-ha-ansible
 
+
+
 ## Vagrant setup
 
 ```sh
 # optional
-vagrant plugin install vagrant-hostmanager
+# vagrant plugin install vagrant-hostmanager
 
+# start VM
 vagrant up
+
+# for SELinux disabled
 vagrant reload --no-provision
 
-ssh-keygen
-ssh-copy-id vagrant@192.168.1.201
-ssh-copy-id vagrant@192.168.1.202
-
-ssh vagrant@192.168.1.201 hostname
-ssh vagrant@192.168.1.202 hostname
-
-# optional
-vagrant ssh-config >> ~/.ssh/config
-ssh pg1 hostname
-ssh pg2 hostname
-
-# confirm
-ansible all -i inventories/vagrant/hosts.yml -m ping
-
-# optional
+# optional: for restore in initial state
 vagrant halt
 vagrant snapshot save init
 vagrant up
+
+# remove from known_hosts
+ssh-keygen -R 192.168.1.201
+ssh-keygen -R 192.168.1.202
+
+# add known_hosts
+ssh-keyscan 192.168.1.201 >> ~/.ssh/known_hosts
+ssh-keyscan 192.168.1.202 >> ~/.ssh/known_hosts
+
+# confirm: ansible ping
+# export ANSIBLE_HOST_KEY_CHECKING=False
+ansible all -i inventories/vagrant/hosts.yml -m ping
 ```
+
+```sh
+# optional: An example of using `ssh` instead of` vagrant ssh`.
+vagrant ssh-config >> ~/.ssh/config
+ssh pg1 hostname
+ssh pg2 hostname
+```
+
+
 
 ## install `ansible`
 
@@ -36,50 +47,32 @@ vagrant up
 brew install ansible
 ```
 
+
+
 ## `ansible-playbook`
 
 ```sh
-ansible-playbook site.yml -i inventories/vagrant/hosts.yml --ask-pass
+ansible-playbook site.yml -i inventories/vagrant/hosts.yml
 ```
 
-`--ask-pass` is aka `-k`
+
 
 ## startup PostgreSQL and pgpool-II
 
-### 1. ssh setup
-
-ssh `pg1` and `pg2`
-
-```sh
-sudo su
-
-passwd postgres
-
-su - postgres
-
-ssh-keygen
-
-ssh-copy-id backend-pg1
-ssh-copy-id backend-pg2
-
-ssh backend-pg1
-ssh backend-pg2
-```
-
-### 2. stop `standby` PostgreSQL database at `pg2`
+### 1. stop `standby` PostgreSQL database at `pg2`
 
 ```sh
 systemctl stop postgresql-10.service
 ```
 
-### 3. startup `primary` PostgreSQL database at `pg1`
+### 2. startup `primary` PostgreSQL database at `pg1`
 
 ```sh
 systemctl start postgresql-10.service
 systemctl start pgpool.service
 ```
 
-### 4. startup `standby` PostgreSQL database
+### 3. startup `standby` PostgreSQL database
 
 ```sh
 pcp_recovery_node -h pg -U postgres -n 1
@@ -87,13 +80,17 @@ pcp_recovery_node -h pg -U postgres -n 1
 
 `pg` is `vip` setuped by pgpool.
 
-### 5. startup pgpool-II at `pg2` (optional)
+### 4. startup pgpool-II at `pg2` (optional)
 
 ```sh
 systemctl start pgpool.service
 ```
 
+
+
 ## check
+
+### pgpool-II status
 
 ```sh
 pcp_watchdog_info -h pg -U postgres -v
@@ -127,6 +124,8 @@ Status         : 7
 Status Name    : STANDBY
 ```
 
+### PostgreSQL status
+
 ```sh
 psql -h pg -p 9999 -U postgres -c "show pool_nodes"
  node_id |  hostname   | port | status | lb_weight |  role   | select_cnt | load_balance_node | replication_delay
@@ -135,6 +134,8 @@ psql -h pg -p 9999 -U postgres -c "show pool_nodes"
  1       | backend-pg2 | 5432 | up     | 0.500000  | standby | 0          | false             | 0
 (2 rows)
 ```
+
+
 
 ## memo
 
