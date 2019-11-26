@@ -30,6 +30,37 @@
           with_items: "{{ rpm.packages }}"
 
     # ##################################################
+    # user
+    # ##################################################
+    - tags: user
+      block:
+        - name: password for postgres user
+          user:
+            name: postgres
+            password: "{{ 'postgres' | password_hash('sha512', 'mysecretsalt') }}"
+        - name: public key for postgres user
+          authorized_key:
+            user: postgres
+            key: "{{ lookup('pipe', 'ssh-keygen -y -f .vagrant/machines/pg1/virtualbox/private_key') }}"
+        - name: copy id_rsa
+          copy:
+            src: .vagrant/machines/pg1/virtualbox/private_key
+            dest: /var/lib/pgsql/.ssh/id_rsa
+            owner: postgres
+            group: postgres
+            mode: 0600
+        # - name: remove known_hosts pg1
+        #   shell: ssh-keygen -R backend-pg1
+        #   become_user: postgres
+        # - name: remove known_hosts pg2
+        #   shell: ssh-keygen -R backend-pg2
+        #   become_user: postgres
+        - name: add known_hosts pg1
+          shell: ssh-keyscan backend-pg1 > /var/lib/pgsql/.ssh/known_hosts
+        - name: add known_hosts pg2
+          shell: ssh-keyscan backend-pg2 >> /var/lib/pgsql/.ssh/known_hosts
+
+    # ##################################################
     # create archive and backup directory
     # ##################################################
     - tags: create-directory
@@ -129,7 +160,7 @@
       block:
         # service start
         - name: service started
-          changed_when: false
+          # changed_when: false
           systemd:
             name: postgresql-{{ pg_version_major }}.service
             state: started
@@ -152,11 +183,11 @@
         #   systemd:
         #     name: pgpool.service
         #     state: stopped
-        # - name: service stopped
-        #   changed_when: false
-        #   systemd:
-        #     name: postgresql-{{ pg_version_major }}.service
-        #     state: stopped
+        - name: service stopped
+          # changed_when: false
+          systemd:
+            name: postgresql-{{ pg_version_major }}.service
+            state: stopped
 
     # ##################################################
     # logrotate
